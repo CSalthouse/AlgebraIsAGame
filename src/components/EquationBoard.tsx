@@ -1,12 +1,14 @@
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableBlock, type BlockType } from './DraggableBlock';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 interface EquationBlock {
   id: string;
   content: string;
   type: BlockType;
+  hidden?: boolean;
 }
 
 interface EquationBoardProps {
@@ -15,6 +17,59 @@ interface EquationBoardProps {
 }
 
 export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
+  // Local state so the board can react to drag events and update blocks.
+  // We initialize from props but own the state here so we can mutate
+  // (hide/modify) blocks in response to interactions.
+  const [leftBlocks, setLeftBlocks] = useState(leftSide);
+  const [rightBlocks, setRightBlocks] = useState(rightSide);
+
+  useEffect(() => {
+    setLeftBlocks(leftSide);
+  }, [leftSide]);
+
+  useEffect(() => {
+    setRightBlocks(rightSide);
+  }, [rightSide]);
+
+  // Keep a snapshot of the previous left blocks so we can restore them
+  // if a drag is cancelled or ends without committing changes.
+  const previousLeftSnapshot = useRef<EquationBlock[] | null>(null);
+
+  // Handler invoked when a block drag begins. If block-3 begins drag,
+  // snapshot the current left blocks, then update block-3's content to '+3'
+  // and hide block-2 by filtering it out.
+  // (previous handleDragBegin removed - restored to simpler behavior)
+
+  // Restore left blocks from the snapshot when drag ends for block-3.
+  function handleDragEnd(id: string) {
+    if (id === 'block-3') {
+      if (previousLeftSnapshot.current) {
+        setLeftBlocks(previousLeftSnapshot.current);
+        previousLeftSnapshot.current = null;
+      }
+    }
+  }
+
+  // Click handler to change block content when clicked.
+  function handleBlockClick(id: string) {
+    if (id === 'block-3') {
+      setLeftBlocks((prev) => prev.map((b) => (b.id === 'block-3' ? { ...b, content: '+3' } : b)));
+    }
+  }
+
+  // Pointer-down handler to change block content immediately when the
+  // user presses down to start a drag (before the actual drag begins).
+  function handleBlockPointerDown(id: string) {
+    if (id === 'block-3') {
+      // Snapshot now so we can restore on drag end
+      previousLeftSnapshot.current = leftBlocks;
+      // Delay the UI change to avoid re-registering the drag source
+      setTimeout(() => {
+        setLeftBlocks((prev) => prev.map((b) => (b.id === 'block-3' ? { ...b, content: '+3' } : b)));
+      }, 0);
+    }
+  }
+
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex flex-col">
@@ -33,12 +88,16 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
             <div className="flex items-center gap-6 justify-center">
               {/* Left side of equation */}
               <div className="flex items-center gap-3">
-                {leftSide.map((block) => (
+                {leftBlocks.map((block) => (
                   <DraggableBlock
                     key={block.id}
                     id={block.id}
                     content={block.content}
                     type={block.type}
+                    onDragEnd={handleDragEnd}
+                    hidden={block.hidden}
+                    onClick={handleBlockClick}
+                    onPointerDown={handleBlockPointerDown}
                   />
                 ))}
               </div>
@@ -48,12 +107,13 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
 
               {/* Right side of equation */}
               <div className="flex items-center gap-3">
-                {rightSide.map((block) => (
+                {rightBlocks.map((block) => (
                   <DraggableBlock
                     key={block.id}
                     id={block.id}
                     content={block.content}
                     type={block.type}
+                    onDragEnd={handleDragEnd}
                   />
                 ))}
               </div>
@@ -76,6 +136,7 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
             </div>
           </div>
         </div>
+        {/* debug panel removed during revert */}
       </div>
     </DndProvider>
   );
