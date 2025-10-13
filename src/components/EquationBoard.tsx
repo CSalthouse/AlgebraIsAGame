@@ -1,7 +1,7 @@
-import { DndProvider } from 'react-dnd';
+import { DndProvider, useDragLayer } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableBlock, type BlockType } from './DraggableBlock';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 interface EquationBlock {
@@ -31,48 +31,76 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
     setRightBlocks(rightSide);
   }, [rightSide]);
 
-  // Keep a snapshot of the previous left blocks so we can restore them
-  // if a drag is cancelled or ends without committing changes.
-  const previousLeftSnapshot = useRef<EquationBlock[] | null>(null);
+  // Handler invoked when drag begins
+  function handleDragBegin(id: string) {
+    // Not needed anymore, useDragLayer handles overlay
+  }
 
-  // Handler invoked when a block drag begins. If block-3 begins drag,
-  // snapshot the current left blocks, then update block-3's content to '+3'
-  // and hide block-2 by filtering it out.
-  // (previous handleDragBegin removed - restored to simpler behavior)
-
-  // Restore left blocks from the snapshot when drag ends for block-3.
+  // Handler invoked when drag ends
   function handleDragEnd(id: string) {
-    if (id === 'block-3') {
-      if (previousLeftSnapshot.current) {
-        setLeftBlocks(previousLeftSnapshot.current);
-        previousLeftSnapshot.current = null;
-      }
-    }
+    // Not needed anymore, useDragLayer handles overlay
   }
 
-  // Click handler to change block content when clicked.
-  function handleBlockClick(id: string) {
-    if (id === 'block-3') {
-      setLeftBlocks((prev) => prev.map((b) => (b.id === 'block-3' ? { ...b, content: '+3' } : b)));
-    }
-  }
+  // Click and pointer handlers not needed anymore since we're only showing
+  // the plus during drag
+  function handleBlockClick(id: string) {}
+  function handleBlockPointerDown(id: string) {}
 
-  // Pointer-down handler to change block content immediately when the
-  // user presses down to start a drag (before the actual drag begins).
-  function handleBlockPointerDown(id: string) {
-    if (id === 'block-3') {
-      // Snapshot now so we can restore on drag end
-      previousLeftSnapshot.current = leftBlocks;
-      // Delay the UI change to avoid re-registering the drag source
-      setTimeout(() => {
-        setLeftBlocks((prev) => prev.map((b) => (b.id === 'block-3' ? { ...b, content: '+3' } : b)));
-      }, 0);
+  // Custom drag layer component to show the plus sign
+  const DragLayer = () => {
+    interface DragItem {
+      id: string;
+      content: string;
+      type: BlockType;
     }
-  }
+
+    const blockColors: Record<BlockType, string> = {
+      variable: 'bg-gradient-to-br from-purple-400 to-purple-600 text-white',
+      number: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white',
+      operator: 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-gray-800',
+      equals: 'bg-gradient-to-br from-teal-400 to-teal-600 text-white',
+    };
+
+    const { isDragging, currentOffset, item } = useDragLayer((monitor) => ({
+      isDragging: monitor.isDragging(),
+      currentOffset: monitor.getSourceClientOffset(),
+      item: monitor.getItem<DragItem>(),
+    }));
+
+    if (!isDragging || !currentOffset || item?.id !== 'block-3') {
+      return null;
+    }
+
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          pointerEvents: 'none',
+          left: currentOffset.x - 15,
+          top: currentOffset.y - 15,
+          zIndex: 1000,
+        }}
+      >
+        <div className={`
+          ${blockColors['number']}
+          px-6 py-4 rounded-2xl shadow-lg
+          flex items-center justify-center
+          border-4 border-white
+          transition-all
+          opacity-80
+        `}
+        style={{ minWidth: '80px' }}
+        >
+          <span className="select-none">+3</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex flex-col">
+        <DragLayer />
         <div className="px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-purple-600">🎯 Equation Board</h2>
@@ -89,16 +117,18 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
               {/* Left side of equation */}
               <div className="flex items-center gap-3">
                 {leftBlocks.map((block) => (
-                  <DraggableBlock
-                    key={block.id}
-                    id={block.id}
-                    content={block.content}
-                    type={block.type}
-                    onDragEnd={handleDragEnd}
-                    hidden={block.hidden}
-                    onClick={handleBlockClick}
-                    onPointerDown={handleBlockPointerDown}
-                  />
+                  <div key={block.id} data-block-id={block.id}>
+                    <DraggableBlock
+                      id={block.id}
+                      content={block.content}
+                      type={block.type}
+                      onDragEnd={handleDragEnd}
+                      onDragBegin={handleDragBegin}
+                      hidden={block.hidden}
+                      onClick={handleBlockClick}
+                      onPointerDown={handleBlockPointerDown}
+                    />
+                  </div>
                 ))}
               </div>
 

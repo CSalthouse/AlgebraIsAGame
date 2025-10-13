@@ -1,4 +1,5 @@
 import { useDrag } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
 import { motion } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 
@@ -9,6 +10,7 @@ interface DraggableBlockProps {
   content: string;
   type: BlockType;
   onDragEnd?: (id: string) => void;
+  onDragBegin?: (id: string) => void;
   hidden?: boolean;
   onClick?: (id: string) => void;
   onPointerDown?: (id: string) => void;
@@ -21,17 +23,28 @@ const blockColors: Record<BlockType, string> = {
   equals: 'bg-gradient-to-br from-teal-400 to-teal-600 text-white',
 };
 
-export function DraggableBlock({ id, content, type, onDragEnd, hidden, onClick, onPointerDown }: DraggableBlockProps) {
-  const [{ isDragging }, drag] = useDrag(() => ({
+export function DraggableBlock({ id, content, type, onDragEnd, onDragBegin, hidden, onClick, onPointerDown }: DraggableBlockProps) {
+  const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     type: 'EQUATION_BLOCK',
-    item: { id, content, type },
+    item: () => {
+      onDragBegin?.(id);
+      return { id, content, type };
+    },
     end: (item) => {
       onDragEnd?.(item?.id ?? id);
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    previewOptions: {
+      captureDraggingState: true,
+    },
   }));
+
+  // Connect an empty preview so nothing shows except our custom drag layer
+  useEffect(() => {
+    dragPreview(getEmptyImage(), { captureDraggingState: true });
+  }, [dragPreview]);
 
   // fallback: if `end` doesn't fire for whatever reason, detect drag state change
   // and notify parent to restore UI.
@@ -57,7 +70,9 @@ export function DraggableBlock({ id, content, type, onDragEnd, hidden, onClick, 
         flex items-center justify-center
         border-4 border-white
         transition-all
-        ${isDragging ? 'opacity-50 ring-4 ring-blue-400' : 'hover:ring-4 hover:ring-blue-300'}
+        relative
+        group
+        ${isDragging ? 'opacity-30' : 'hover:ring-4 hover:ring-blue-300'}
         ${hidden ? 'invisible pointer-events-none' : ''}
       `}
       style={{ minWidth: '80px' }}
@@ -65,8 +80,18 @@ export function DraggableBlock({ id, content, type, onDragEnd, hidden, onClick, 
       onPointerDown={() => onPointerDown?.(id)}
       onMouseDown={() => onPointerDown?.(id)}
       onTouchStart={() => onPointerDown?.(id)}
+      data-plus={id === 'block-3' && content === '+3'}
     >
-      <span className="select-none">{content}</span>
+      <span className="select-none">{content === '+3' ? '3' : content}</span>
+      {id === 'block-3' && (
+        <span className="select-none absolute left-2.5 top-1/2 -translate-y-1/2 transition-opacity bg-inherit rounded-full"
+              style={{
+                opacity: content === '+3' ? '1' : '0',
+                transition: 'opacity 150ms ease-in-out'
+              }}>
+          +
+        </span>
+      )}
     </motion.div>
   );
 }
