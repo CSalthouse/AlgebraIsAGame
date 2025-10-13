@@ -81,6 +81,7 @@ export function DraggableBlock({ id, content, type, onDragEnd, onDragBegin, hidd
       onMouseDown={() => onPointerDown?.(id)}
       onTouchStart={() => onPointerDown?.(id)}
       data-plus={id === 'block-3' && content === '+3'}
+      data-block-id={id}
     >
       <span className="select-none">{content === '+3' ? '3' : content}</span>
       {id === 'block-3' && (

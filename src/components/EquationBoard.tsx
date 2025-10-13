@@ -71,6 +71,18 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
       return null;
     }
 
+    // Find the equals element on the page and compute its center X
+    const equalsEl = document.querySelector('[data-block-id="equals"]') as HTMLElement | null;
+    let equalsCenterX = Infinity;
+    if (equalsEl) {
+      const rect = equalsEl.getBoundingClientRect();
+      equalsCenterX = rect.left + rect.width / 2;
+    }
+
+    // Determine sign based on whether current drag X is to the right of equals center
+    const draggedX = currentOffset.x;
+    const previewText = draggedX > equalsCenterX ? '-3' : '+3';
+
     return (
       <div
         style={{
@@ -91,7 +103,7 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
         `}
         style={{ minWidth: '80px' }}
         >
-          <span className="select-none">+3</span>
+          <span className="select-none">{previewText}</span>
         </div>
       </div>
     );
