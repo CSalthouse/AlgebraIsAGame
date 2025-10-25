@@ -20,6 +20,8 @@ interface DraggableBlockProps {
     ) => void;
   onDragBegin?: (id: string) => void;
   hidden?: boolean;
+  onClick?: (id: string) => void;
+  onPointerDown?: (id: string) => void;
 
 }
 
@@ -28,6 +30,7 @@ const blockColors: Record<BlockType, string> = {
   number: 'bg-gradient-to-br from-orange-400 to-orange-600 text-white',
   operator: 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-gray-800',
   equals: 'bg-gradient-to-br from-teal-400 to-teal-600 text-white',
+  parenthesis: 'bg-gradient-to-br from-green-400 to-green-600 text-white',
 };
 
 export function DraggableBlock({ 
@@ -94,10 +97,9 @@ export function DraggableBlock({
         ${hidden ? 'invisible pointer-events-none' : ''}
       `}
       style={{ minWidth: '80px' }}
-      onClick={() => onClick?.(id)}
-      onPointerDown={() => onPointerDown?.(id)}
       onMouseDown={() => onPointerDown?.(id)}
       onTouchStart={() => onPointerDown?.(id)}
+      onClick={() => onClick?.(id)}
       data-plus={id === 'block-3' && content === '+3'}
       data-block-id={id}
     >
