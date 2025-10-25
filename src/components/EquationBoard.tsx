@@ -9,6 +9,9 @@ interface EquationBlock {
   content: string;
   type: BlockType;
   hidden?: boolean;
+  leftSide?: boolean;
+  parenLevel?: number;
+
 }
 
 interface EquationBoardProps {
@@ -32,19 +35,50 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
   }, [rightSide]);
 
   // Handler invoked when drag begins
-  function handleDragBegin(id: string) {
+  function handleDragBegin(_id: string) {
     // Not needed anymore, useDragLayer handles overlay
   }
 
-  // Handler invoked when drag ends
-  function handleDragEnd(id: string) {
-    // Not needed anymore, useDragLayer handles overlay
+  // Handler invoked when drag ends. Accepts optional clientOffset from drag monitor.
+  function handleDragEnd(id: string, clientOffset?: { x: number; y: number } | null,
+    leftSide?: boolean, parenLevel?: number) {
+    if (!clientOffset) return;
+
+    // Find equals center X
+    const equalsEl = document.querySelector('[data-block-id="equals"]') as HTMLElement | null;
+    let equalsCenterX = Infinity;
+    if (equalsEl) {
+      const rect = equalsEl.getBoundingClientRect();
+      equalsCenterX = rect.left + rect.width / 2;
+    }
+    // If block was on left
+    if (leftSide) { 
+    // If dropped to the right of equals, move the block from left to right
+      if (clientOffset.x > equalsCenterX && id === 'block-3') {
+        setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
+        setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
+
+        // append to right side
+        setRightBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSide: true }]);
+        setRightBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSide: true }]);
+      }
+    }
+    // If block was on right
+    if (!leftSide) { 
+    // If dropped to the left of equals, move the block from right to left
+      if (clientOffset.x < equalsCenterX && id === 'block-3') {
+        setRightBlocks((prev) => prev.filter((b) => b.id !== id));
+        setRightBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
+
+        // append to right side
+        setLeftBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSide: false }]);
+        setLeftBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSide: false }]);
+      }
+    }
+
+
   }
 
-  // Click and pointer handlers not needed anymore since we're only showing
-  // the plus during drag
-  function handleBlockClick(id: string) {}
-  function handleBlockPointerDown(id: string) {}
 
   // Custom drag layer component to show the plus sign
   const DragLayer = () => {
@@ -134,11 +168,10 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
                       id={block.id}
                       content={block.content}
                       type={block.type}
+                      leftSide={true}
                       onDragEnd={handleDragEnd}
                       onDragBegin={handleDragBegin}
                       hidden={block.hidden}
-                      onClick={handleBlockClick}
-                      onPointerDown={handleBlockPointerDown}
                     />
                   </div>
                 ))}
@@ -155,6 +188,7 @@ export function EquationBoard({ leftSide, rightSide }: EquationBoardProps) {
                     id={block.id}
                     content={block.content}
                     type={block.type}
+                    leftSide={false}
                     onDragEnd={handleDragEnd}
                   />
                 ))}

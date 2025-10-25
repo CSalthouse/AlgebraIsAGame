@@ -3,17 +3,24 @@ import { getEmptyImage } from 'react-dnd-html5-backend';
 import { motion } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 
-export type BlockType = 'variable' | 'number' | 'operator' | 'equals';
+export type BlockType = 'variable' | 'number' | 'operator' | 'equals' | 'parenthesis';
 
 interface DraggableBlockProps {
   id: string;
   content: string;
   type: BlockType;
-  onDragEnd?: (id: string) => void;
+  leftSide?: boolean;
+  parenLevel?: number;
+  // onDragEnd now receives the id and the client offset where it was dropped
+  onDragEnd?: (
+    id: string, 
+    clientOffset?: { x: number; y: number } | null,
+    leftSide?: boolean, 
+    parenLevel?: number
+    ) => void;
   onDragBegin?: (id: string) => void;
   hidden?: boolean;
-  onClick?: (id: string) => void;
-  onPointerDown?: (id: string) => void;
+
 }
 
 const blockColors: Record<BlockType, string> = {
@@ -23,15 +30,26 @@ const blockColors: Record<BlockType, string> = {
   equals: 'bg-gradient-to-br from-teal-400 to-teal-600 text-white',
 };
 
-export function DraggableBlock({ id, content, type, onDragEnd, onDragBegin, hidden, onClick, onPointerDown }: DraggableBlockProps) {
+export function DraggableBlock({ 
+  id,
+  content,
+  type, 
+  leftSide,
+  parenLevel,
+  onDragEnd, 
+  onDragBegin, 
+  hidden, 
+  onClick, 
+  onPointerDown }: DraggableBlockProps) {
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     type: 'EQUATION_BLOCK',
     item: () => {
       onDragBegin?.(id);
       return { id, content, type };
     },
-    end: (item) => {
-      onDragEnd?.(item?.id ?? id);
+    end: (item, monitor) => {
+      const clientOffset = monitor.getClientOffset();
+      onDragEnd?.(item?.id ?? id, clientOffset ?? null, leftSide, parenLevel);
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
