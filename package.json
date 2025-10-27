@@ -18,12 +18,14 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.22",
+    "katex": "^0.16.25",
     "lucide-react": "^0.545.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^19.1.1",
+    "react-katex": "^3.1.0",
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {

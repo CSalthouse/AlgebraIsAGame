@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { StepsPane } from './components/StepsPane';
 import { EquationBoard } from './components/EquationBoard';
 import { Footer } from './components/Footer';
+import 'katex/dist/katex.min.css';
+
 
 // Define the shape of a single step shown in the StepsPane.
 // Keeping this lightweight helps TypeScript provide autocomplete and
@@ -16,7 +18,7 @@ interface Step {
 export default function App() {
   // Local state: an array of Steps used by the StepsPane.
   // Only reading here — the app likely manages step updates elsewhere.
-  const [steps] = useState<Step[]>([
+  const [steps,setSteps] = useState<Step[]>([
     {
       id: 1,
       description: 'Starting equation: 2x + 3 = 5',
@@ -24,17 +26,31 @@ export default function App() {
     },
   ]);
 
+  const addStep = useCallback((description: string) => {
+    setSteps(prev => {
+      const nextId = prev.length ? Math.max(...prev.map(s => s.id)) + 1 : 1;
+      return [...prev, { id: nextId, description, completed: false }];
+    });
+  }, []);
+
+  const toggleStepCompleted = useCallback((id: number) => {
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, completed: !s.completed } : s));
+  }, []);
+
+
+
   // These arrays represent the blocks shown on the EquationBoard.
   // Each block has a stable `id`, `content` string to display, and
   // a `type` literal used for rendering/styling/dragging logic.
   const leftSide = [
-    { id: 'block-1', content: '2x', type: 'variable' as const },
-    { id: 'block-2', content: '+', type: 'operator' as const },
-    { id: 'block-3', content: '3', type: 'number' as const },
+    { id: 'block-1', content: '2x', type: 'variable' as const, leftSide: true },
+    { id: 'block-2', content: '+', type: 'operator' as const, leftSide: true },
+    { id: 'block-3', content: '3', type: 'number' as const , leftSide: true},
   ];
 
+  console.log('1 Left Side Blocks:', leftSide);
   const rightSide = [
-    { id: 'block-4', content: '5', type: 'number' as const },
+    { id: 'block-4', content: '5', type: 'number' as const, leftSide: false },
   ];
 
   // The app layout is a vertical column (header, body, footer).
@@ -50,7 +66,12 @@ export default function App() {
         {/* Left Panel - Equation Board (65%) */}
         <div className="w-[65%]">
           {/* Pass the left and right side blocks to EquationBoard as props */}
-          <EquationBoard leftSide={leftSide} rightSide={rightSide} />
+          <EquationBoard 
+            leftSide={leftSide} 
+            rightSide={rightSide} 
+            onAddStep={addStep}
+            onToggleStepCompleted={toggleStepCompleted} 
+            />
         </div>
 
         {/* Right Panel - Steps Pane (35%) */}
