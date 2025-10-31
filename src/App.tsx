@@ -44,17 +44,17 @@ export default function App() {
   // a `type` literal used for rendering/styling/dragging logic.
   const leftSide = [
     { id: 'block-1', content: '2x', type: 'variable' as const,
-       leftSide: true, dragAdd=false, dragMult=false },
+       leftSide: true, dragAdd: false, dragMult: false },
     { id: 'block-2', content: '+', type: 'operator' as const,
-       leftSide: true, dragAdd=false, dragMult=false   },
+       leftSide: true, dragAdd:false, dragMult: false   },
     { id: 'block-3', content: '3', type: 'number' as const , 
-      leftSide: true, dragAdd=true, dragMult=false},
+      leftSide: true, dragAdd:true, dragMult:false},
   ];
 
   console.log('1 Left Side Blocks:', leftSide);
   const rightSide = [
     { id: 'block-4', content: '5', type: 'number' as const, 
-      leftSide: false, dragAdd=false, dragMult=false },
+      leftSide: false, dragAdd:false, dragMult:false },
   ];
 
   // The app layout is a vertical column (header, body, footer).

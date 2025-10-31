@@ -29,6 +29,10 @@ type DragItem = {
   id: string;
   content: string;
   type: BlockType;
+  leftSide?: boolean;
+  parenLevel?: number;
+  dragAdd?: boolean;
+  dragMult?: boolean;
 };
 
 //helper function for generating equation string
@@ -83,7 +87,7 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
 
   // Handler invoked when drag ends. Accepts optional clientOffset from drag monitor.
   function handleDragEnd(id: string, clientOffset?: { x: number; y: number } | null,
-    leftSide?: boolean, parenLevel?: number) {
+    leftSide?: boolean, parenLevel?: number, dragAdd?: boolean, dragMult?: boolean,) {
     if (!clientOffset) return;
 
     // Find equals center X
@@ -96,15 +100,25 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
     // If block was on left
     if (leftSide) {
       // If dropped to the right of equals, move the block from left to right
-      if (clientOffset.x > equalsCenterX && id === 'block-3') {
-        setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
-        setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
+    //  if (clientOffset.x > equalsCenterX && id === 'block-3') {
+        if (clientOffset.x > equalsCenterX ) {
+             setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
+              setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
+              setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-21'));
 
+
+        if (dragAdd) {
         // append to right side
         setRightBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSide: true }]);
         setRightBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSide: true }]);
       }
+      if (dragMult) {
+        // append to right side
+        setRightBlocks((prev) => [ { id: 'block-2', content: '*', type: 'operator', leftSide: true },...prev]);
+        setRightBlocks((prev) => [{ id, content: '1/2', type: 'number', leftSide: true },...prev]);
+      }
     }
+  }
     // If block was on right
     if (!leftSide) {
       // If dropped to the left of equals, move the block from right to left
@@ -127,20 +141,27 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
   if (content === '-') {
     //first I am going to hard code the subtraction.  Then I will have to go back and compute 
     setRightBlocks((prev) => [{ id: 'block-5', content: '2', type: 'number', 
-      leftSide: false, dragAdd=false, dragMult=false },]);
-    setLeftBlocks((prev) => [{ id: 'block-1', content: '2', type: 'number', 
-      leftSide: true, dragAdd=false, dragMult=true },
-      { id: 'block-2', content: '*', type: 'operator', leftSide: true,
-        dragAdd=false, dragMult=false       },
-      { id: 'block-3', content: 'x', type: 'variable', leftSide: true,
-        dragAdd=false, dragMult=false  },
+      leftSide: false, dragAdd: false, dragMult:false },]);
+    setLeftBlocks((prev) => [{ id: 'block-11', content: '2', type: 'number', 
+      leftSide: true, dragAdd: false, dragMult:true },
+      { id: 'block-21', content: '*', type: 'operator', leftSide: true,
+        dragAdd:false, dragMult:false       },
+      { id: 'block-31', content: 'x', type: 'variable', leftSide: true,
+        dragAdd:false, dragMult:false  },
       
     ]);
 
   }
+  if (content === '*') {
+    //first I am going to hard code the subtraction.  Then I will have to go back and compute 
+    setRightBlocks((prev) => [{ id: 'block-31', content: '1', type: 'number', 
+      leftSide: false, dragAdd: false, dragMult:false },]);
+      
+
+  }
 };
 
-  // Custom drag layer component to show the plus sign
+  // Custom drag layer component to handle switching sides preview
   const DragLayer = () => {
 
 
@@ -174,14 +195,13 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
 
     // Determine sign based on whether current drag X is to the right of equals center
     const draggedX = currentOffset.x;
+    let previewText = 'ERROR';
+    if (item.dragMult) {
+      previewText = draggedX > equalsCenterX ? '1/2' : '2';
+    } else if (item.dragAdd) {
+      previewText = draggedX > equalsCenterX ? '-3' : '3';
+      } 
 
-    if item?.dragMult {
-      const previewText = draggedX > equalsCenterX ? '1/3' : '3';
-    } else if item?.dragAdd {
-      const previewText = draggedX > equalsCenterX ? '-3' : '+3';
-      } else  {
-      const previewText = 'ERROR';
-        }
     return (
       <div
         style={{
@@ -237,7 +257,9 @@ function BoardInner({
   handleDragEnd: (id: string,
     clientOffset?: { x: number; y: number } | null,
     leftSide?: boolean,
-    parenLevel?: number
+    parenLevel?: number,
+    dragAdd?: boolean,
+    dragMult?: boolean,
   ) => void;
   handleBlockClick: (id: string, content: string) => void;
 }) {
@@ -284,7 +306,7 @@ function BoardInner({
                       hidden={block.hidden}
                       dimmed={dimmed}
                       dragAdd={block.dragAdd}
-                      drabMult={block.dragMult}
+                      dragMult={block.dragMult}
                     />
                   </div>
                 );

@@ -21,7 +21,9 @@ interface DraggableBlockProps {
     id: string, 
     clientOffset?: { x: number; y: number } | null,
     leftSide?: boolean, 
-    parenLevel?: number
+    parenLevel?: number,
+    dragAdd?: boolean,
+    dragMult?: boolean,
     ) => void;
   onDragBegin?: (id: string) => void;
   hidden?: boolean;
@@ -78,13 +80,15 @@ export function DraggableBlock({
   onPointerDown }: DraggableBlockProps) {
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     type: 'EQUATION_BLOCK',
-    item: () => {
+    // `item` provides the drag item payload. `begin` is called when drag starts.
+    item: ()  => {
+      console.log(`useDrag.begin id=${id}`);
       onDragBegin?.(id);
-      return { id, content, type };
+      return { id, content, type, leftSide, parenLevel, dragAdd, dragMult };
     },
     end: (item, monitor) => {
       const clientOffset = monitor.getClientOffset();
-      onDragEnd?.(item?.id ?? id, clientOffset ?? null, leftSide, parenLevel);
+      onDragEnd?.(item?.id ?? id, clientOffset ?? null, leftSide, parenLevel, dragAdd, dragMult);
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
@@ -110,7 +114,7 @@ export function DraggableBlock({
   }, [isDragging, id, onDragEnd]);
 
   return (
-    console.log(`Rendering DraggableBlock id=${id} content=${content} isDragging=${isDragging} dimmed=${dimmed}`),
+    console.log(`Rendering DraggableBlock id=${id} content=${content} isDragging=${isDragging} dimmed=${dimmed} dragMult=${dragMult} dragAdd=${dragAdd}   `),
 
     <motion.div
       // react-dnd's drag ref type is incompatible with React's Ref types
@@ -132,18 +136,30 @@ export function DraggableBlock({
         ${dimmed ? 'opacity-30' : ''}
 
       `}
-      style={{ minWidth: '80px' }}
-      onMouseDown={() => onPointerDown?.(id)}
-      onTouchStart={() => onPointerDown?.(id)}
+  style={{ minWidth: '80px' }}
+      onPointerDown={(e) => {
+        console.log(`DraggableBlock.onPointerDown id=${id} type=${e.type} clientX=${e.clientX} clientY=${e.clientY}`);
+        onPointerDown?.(id);
+      }}
+      onMouseDown={(e) => {
+        console.log(`DraggableBlock.onMouseDown id=${id} type=${e.type} clientX=${e.clientX} clientY=${e.clientY}`);
+        onPointerDown?.(id);
+      }}
+      onTouchStart={(e) => {
+        // React.TouchEvent: touches[0] has coordinates
+        const t = e.touches && e.touches[0];
+        console.log(`DraggableBlock.onTouchStart id=${id} type=${e.type} clientX=${t ? t.clientX : 'n/a'} clientY=${t ? t.clientY : 'n/a'}`);
+        onPointerDown?.(id);
+      }}
       onClick={() => onClick?.(id, content)}
       data-plus={id === 'block-3' && content === '+3'}
       data-block-id={id}
       data-drag-add={dragAdd ? 'true' : undefined}
       data-drag-mult={dragMult ? 'true' : undefined}
     >
-      <span className="select-none">{content === '+3' ? '3' : renderMath(content)}</span>
+      <span className="select-none pointer-events-none">{content === '+3' ? '3' : renderMath(content)}</span>
       {id === 'block-3' && (
-        <span className="select-none absolute left-2.5 top-1/2 -translate-y-1/2 transition-opacity bg-inherit rounded-full"
+        <span className="select-none absolute left-2.5 top-1/2 -translate-y-1/2 transition-opacity bg-inherit rounded-full pointer-events-none"
               style={{
                 opacity: content === '+3' ? '1' : '0',
                 transition: 'opacity 150ms ease-in-out'
