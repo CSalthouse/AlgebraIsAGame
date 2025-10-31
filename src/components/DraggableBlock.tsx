@@ -10,6 +10,10 @@ interface DraggableBlockProps {
   id: string;
   content: string;
   type: BlockType;
+  // Indicates this block should be treated as an additive value when dragged
+  dragAdd?: boolean;
+  // Indicates this block should be treated as a multiplicative value when dragged
+  dragMult?: boolean;
   leftSide?: boolean;
   parenLevel?: number;
   // onDragEnd now receives the id and the client offset where it was dropped
@@ -61,6 +65,9 @@ export function DraggableBlock({
   id,
   content,
   type, 
+  // new optional flags for drag semantics
+  dragAdd,
+  dragMult,
   leftSide,
   parenLevel,
   onDragEnd, 
@@ -131,6 +138,8 @@ export function DraggableBlock({
       onClick={() => onClick?.(id, content)}
       data-plus={id === 'block-3' && content === '+3'}
       data-block-id={id}
+      data-drag-add={dragAdd ? 'true' : undefined}
+      data-drag-mult={dragMult ? 'true' : undefined}
     >
       <span className="select-none">{content === '+3' ? '3' : renderMath(content)}</span>
       {id === 'block-3' && (

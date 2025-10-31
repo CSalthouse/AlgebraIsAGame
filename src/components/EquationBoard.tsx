@@ -12,6 +12,8 @@ interface EquationBlock {
   dimmed?: boolean;
   leftSide?: boolean;
   parenLevel?: number;
+  dragAdd?: boolean;
+  dragMult?: boolean;
 
 }
 
@@ -124,10 +126,14 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
   console.log(`Clicked block ${id} (${content})`);
   if (content === '-') {
     //first I am going to hard code the subtraction.  Then I will have to go back and compute 
-    setRightBlocks((prev) => [{ id: 'block-5', content: '2', type: 'number', leftSide: false }]);
-    setLeftBlocks((prev) => [{ id: 'block-1', content: '2', type: 'number', leftSide: true },
-      { id: 'block-2', content: '*', type: 'operator', leftSide: true },
-      { id: 'block-3', content: 'x', type: 'variable', leftSide: true },
+    setRightBlocks((prev) => [{ id: 'block-5', content: '2', type: 'number', 
+      leftSide: false, dragAdd=false, dragMult=false },]);
+    setLeftBlocks((prev) => [{ id: 'block-1', content: '2', type: 'number', 
+      leftSide: true, dragAdd=false, dragMult=true },
+      { id: 'block-2', content: '*', type: 'operator', leftSide: true,
+        dragAdd=false, dragMult=false       },
+      { id: 'block-3', content: 'x', type: 'variable', leftSide: true,
+        dragAdd=false, dragMult=false  },
       
     ]);
 
@@ -152,12 +158,11 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
       item: monitor.getItem<DragItem>(),
     }));
 
-    if (!isDragging || !currentOffset || item?.id !== 'block-3') {
+    if (!isDragging || !currentOffset || !(item?.dragMult  || item?.dragAdd)){
       return null;
     }
 
-    // If we are here, it means that we are dragging 'block-3' so we want to dim the +
-
+    // If we are here, it means that we are dragging a block that is dragMult or dragAdd
 
     // Find the equals element on the page and compute its center X
     const equalsEl = document.querySelector('[data-block-id="equals"]') as HTMLElement | null;
@@ -169,8 +174,14 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
 
     // Determine sign based on whether current drag X is to the right of equals center
     const draggedX = currentOffset.x;
-    const previewText = draggedX > equalsCenterX ? '-3' : '+3';
 
+    if item?.dragMult {
+      const previewText = draggedX > equalsCenterX ? '1/3' : '3';
+    } else if item?.dragAdd {
+      const previewText = draggedX > equalsCenterX ? '-3' : '+3';
+      } else  {
+      const previewText = 'ERROR';
+        }
     return (
       <div
         style={{
@@ -272,6 +283,8 @@ function BoardInner({
                       onClick={handleBlockClick}
                       hidden={block.hidden}
                       dimmed={dimmed}
+                      dragAdd={block.dragAdd}
+                      drabMult={block.dragMult}
                     />
                   </div>
                 );
