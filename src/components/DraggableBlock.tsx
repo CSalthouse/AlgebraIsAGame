@@ -14,13 +14,14 @@ interface DraggableBlockProps {
   dragAdd?: boolean;
   // Indicates this block should be treated as a multiplicative value when dragged
   dragMult?: boolean;
-  leftSide?: boolean;
+  leftSideBlock?: boolean;
   parenLevel?: number;
   // onDragEnd now receives the id and the client offset where it was dropped
   onDragEnd?: (
     id: string, 
+    content?: string,
     clientOffset?: { x: number; y: number } | null,
-    leftSide?: boolean, 
+    leftSideBlock?: boolean, 
     parenLevel?: number,
     dragAdd?: boolean,
     dragMult?: boolean,
@@ -70,7 +71,7 @@ export function DraggableBlock({
   // new optional flags for drag semantics
   dragAdd,
   dragMult,
-  leftSide,
+  leftSideBlock,
   parenLevel,
   onDragEnd, 
   onDragBegin, 
@@ -84,11 +85,11 @@ export function DraggableBlock({
     item: ()  => {
       console.log(`useDrag.begin id=${id}`);
       onDragBegin?.(id);
-      return { id, content, type, leftSide, parenLevel, dragAdd, dragMult };
+      return { id, content, type, leftSideBlock, parenLevel, dragAdd, dragMult };
     },
     end: (item, monitor) => {
       const clientOffset = monitor.getClientOffset();
-      onDragEnd?.(item?.id ?? id, clientOffset ?? null, leftSide, parenLevel, dragAdd, dragMult);
+      onDragEnd?.(item?.id ?? id, content, clientOffset ?? null, leftSideBlock, parenLevel, dragAdd, dragMult);
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),

@@ -10,7 +10,7 @@ interface EquationBlock {
   type: BlockType;
   hidden?: boolean;
   dimmed?: boolean;
-  leftSide?: boolean;
+  leftSideBlock?: boolean;
   parenLevel?: number;
   dragAdd?: boolean;
   dragMult?: boolean;
@@ -20,8 +20,8 @@ interface EquationBlock {
 interface EquationBoardProps {
   leftSide: EquationBlock[];
   rightSide: EquationBlock[];
-  onAddStep?: (description: string) => void;           
-  onToggleStepCompleted?: (id: number) => void; 
+  onAddStep?: (description: string) => void;
+  onToggleStepCompleted?: (id: number) => void;
 }
 
 //defining DragItem here for use in DragLayer and InnerBoard
@@ -29,7 +29,7 @@ type DragItem = {
   id: string;
   content: string;
   type: BlockType;
-  leftSide?: boolean;
+  leftSideBlock?: boolean;
   parenLevel?: number;
   dragAdd?: boolean;
   dragMult?: boolean;
@@ -63,7 +63,7 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
 
   // Run whenever leftBlocks or rightBlocks change
   const firstRunRef = useRef(true);
-  const prevRef = useRef<{leftJson: string; rightJson: string} | null>(null);
+  const prevRef = useRef<{ leftJson: string; rightJson: string } | null>(null);
 
   useEffect(() => {
     const leftJson = JSON.stringify(leftBlocks);
@@ -85,10 +85,54 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
   // Handler invoked when drag begins
   function handleDragBegin(id: string) { }
 
+  function findOperator(prev: EquationBlock[], id: string): string | null {
+    // Find the index of the block with the given id
+    const index = prev.findIndex(block => block.id === id);
+
+    // If not found or if it’s the last item, return null
+    if (index === -1) {
+      return null;
+    }
+
+    var operatorBlock = null;
+
+    if (index === 0) {
+      operatorBlock = prev[index + 1];
+    } else {
+      operatorBlock = prev[index - 1];
+    }
+    // Return its id (could check type === 'operator' if you only want operators)
+    console.log(`findOperator: for id=${id}, found operator id=${operatorBlock?.id}`);
+    return operatorBlock?.id ?? null;
+  }
+
+  function findNextOperator(prev: EquationBlock[], id: string): string | null {
+    // Find the index of the block with the given id
+    const index = prev.findIndex(block => block.id === id);
+
+    // If not found or if it’s the last item, return null
+    if (index === -1 || index === prev.length - 1) {
+      return null;
+    }
+
+    // Get the next block
+    const nextBlock = prev[index + 1];
+
+    // Return its id (could check type === 'operator' if you only want operators)
+    console.log(`findOperator: for id=${id}, found operator id=${nextBlock?.id}`);
+    return nextBlock?.id ?? null;
+  }
+
+
   // Handler invoked when drag ends. Accepts optional clientOffset from drag monitor.
-  function handleDragEnd(id: string, clientOffset?: { x: number; y: number } | null,
-    leftSide?: boolean, parenLevel?: number, dragAdd?: boolean, dragMult?: boolean,) {
+  function handleDragEnd(id: string, content?: string, 
+    clientOffset?: { x: number; y: number } | null,
+    leftSideBlock?: boolean, parenLevel?: number, dragAdd?: boolean, 
+    dragMult?: boolean,) {
+    console.log(`handleDragEnd id=${id} clientOffset=${clientOffset ? `(${clientOffset.x}, ${clientOffset.y})` : 'null'}`);
+
     if (!clientOffset) return;
+    if (content === undefined) content = '';
 
     // Find equals center X
     const equalsEl = document.querySelector('[data-block-id="equals"]') as HTMLElement | null;
@@ -97,69 +141,199 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
       const rect = equalsEl.getBoundingClientRect();
       equalsCenterX = rect.left + rect.width / 2;
     }
+    console.log(`Equals center X: ${equalsCenterX}`);
     // If block was on left
-    if (leftSide) {
+    if (leftSideBlock) {
       // If dropped to the right of equals, move the block from left to right
-    //  if (clientOffset.x > equalsCenterX && id === 'block-3') {
-        if (clientOffset.x > equalsCenterX ) {
-             setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
-              setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
-              setLeftBlocks((prev) => prev.filter((b) => b.id !== 'block-21'));
+      //  if (clientOffset.x > equalsCenterX && id === 'block-3') {
+      if (clientOffset.x > equalsCenterX) {
+        //identify operator block to be deleted
+        setLeftBlocks((prev) => prev.filter((b) => b.id !== findOperator(prev, id)));
+        setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
 
 
         if (dragAdd) {
-        // append to right side
-        setRightBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSide: true }]);
-        setRightBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSide: true }]);
-      }
-      if (dragMult) {
-        // append to right side
-        setRightBlocks((prev) => [ { id: 'block-2', content: '*', type: 'operator', leftSide: true },...prev]);
-        setRightBlocks((prev) => [{ id, content: '1/2', type: 'number', leftSide: true },...prev]);
+          // append to right side
+          setRightBlocks((prev) => [...prev, { id: 'block-2', content: '-', 
+            type: 'operator', leftSideBlock: true }]);
+          setRightBlocks((prev) => [...prev, { id, content: content,
+             type: 'number', leftSideBlock: true }]);
+          console.log('Added subtraction blocks to right side');
+        }
+        if (dragMult) {
+          // append to right side
+          setRightBlocks((prev) => [{ id: 'block-2', content: '*', type: 'operator', leftSideBlock: true }, ...prev]);
+          setRightBlocks((prev) => [{ id, content: '1/'+content, type: 'number', leftSideBlock: true }, ...prev]);
+        }
       }
     }
-  }
     // If block was on right
-    if (!leftSide) {
+    if (!leftSideBlock) {
       // If dropped to the left of equals, move the block from right to left
       if (clientOffset.x < equalsCenterX && id === 'block-3') {
         setRightBlocks((prev) => prev.filter((b) => b.id !== id));
         setRightBlocks((prev) => prev.filter((b) => b.id !== 'block-2'));
 
         // append to right side
-        setLeftBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSide: false }]);
-        setLeftBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSide: false }]);
+        setLeftBlocks((prev) => [...prev, { id: 'block-2', content: '-', type: 'operator', leftSideBlock: false }]);
+        setLeftBlocks((prev) => [...prev, { id, content: '3', type: 'number', leftSideBlock: false }]);
       }
     }
 
 
   }
 
-// EquationBoard.tsx
-  function handleBlockClick(id: string, content: string)  {
-  console.log(`Clicked block ${id} (${content})`);
-  if (content === '-') {
-    //first I am going to hard code the subtraction.  Then I will have to go back and compute 
-    setRightBlocks((prev) => [{ id: 'block-5', content: '2', type: 'number', 
-      leftSide: false, dragAdd: false, dragMult:false },]);
-    setLeftBlocks((prev) => [{ id: 'block-11', content: '2', type: 'number', 
-      leftSide: true, dragAdd: false, dragMult:true },
-      { id: 'block-21', content: '*', type: 'operator', leftSide: true,
-        dragAdd:false, dragMult:false       },
-      { id: 'block-31', content: 'x', type: 'variable', leftSide: true,
-        dragAdd:false, dragMult:false  },
-      
-    ]);
+function parseFraction(str: string): { numerator: number; denominator: number } {
+  const parts = str.split('/').map(s => s.trim());
+  const numerator = Number(parts[0]);
+  const denominator = parts.length > 1 ? Number(parts[1]) : 1;
+  return { numerator, denominator };
+}
+
+function gcd(a: number, b: number): number {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b !== 0) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+  return a;
+}
+
+  function processOperator(prev: EquationBlock[], id: string, content: string): EquationBlock[] {
+    const index = prev.findIndex(b => b.id === id);
+    console.log(`processOperator: operator id=${id} at index=${index}`);
+    if (index <= 0 || index >= prev.length - 1) {
+     console.log(`Operator at index ${index} cannot be processed. index = {index }`);
+      return prev;
+    }
+    const left = prev[index - 1];
+    const op = prev[index];      // operator at index
+    const right = prev[index + 1];
+console.log(`Computed value for ${left.content} ${op.content} ${right.content}`);  
+
+    // convert strings to numbers safely
+    const leftNum = Number(left.content);
+    const rightNum = Number(right.content);
+
+    let value = String(leftNum);
+    if (op.content === '+') value = String(leftNum + rightNum);
+    if (op.content === '-') value = String(leftNum - rightNum);
+    if (op.content === '*') {
+      console.log('Processing multiplication');
+      const leftFraction = parseFraction(left.content);
+      const rightFraction = parseFraction(right.content);
+      const leftNumerator = leftFraction.numerator;
+      const leftDenominator = leftFraction.denominator;
+      const rightNumerator = rightFraction.numerator;
+      const rightDenominator = rightFraction.denominator;
+      console.log('Processing multiplication values');
+      console.log(`Computed value for ${leftNumerator} * ${rightNumerator} /  ${leftDenominator} *  ${rightDenominator}`);  
+
+      const valNumerator=leftNumerator*rightNumerator;
+      const valDenominator=leftDenominator*rightDenominator;
+      const commonDivisor = gcd(valNumerator, valDenominator);
+      if (valDenominator/commonDivisor) {
+        value= String(valNumerator/commonDivisor);
+      } else {
+        value = valNumerator/commonDivisor + '/' + valDenominator/commonDivisor;
+      }
+      console.log(`Computed value for ${leftNumerator} * ${rightNumerator} /  ${leftDenominator} *  ${rightDenominator}`);  
+
+    }
+    if (op.content === '/') value = String(leftNum / rightNum);
+console.log(`Computed value for ${left.content} ${op.content} ${right.content} = ${value}`);  
+    const combined: EquationBlock = {
+      id: crypto.randomUUID(),
+      content: String(value),
+      type: 'number',
+      leftSideBlock: left.leftSideBlock,
+      dragAdd: false,
+      dragMult: false,
+    };
+
+    // return a NEW array (no mutation)
+    console.log(`Combining blocks at index ${index-1}, ${index}, ${index+1} into new block with id=${combined.id} and content=${combined.content}`);
+    return [
+      ...prev.slice(0, index - 1), // everything before left
+      combined,                    // the new combined number
+      ...prev.slice(index + 2),    // everything after right
+    ];
+  }
+
+  function expandVariableProduct(prev: EquationBlock[], leftSideBlock: boolean): EquationBlock[] {
+    if (prev.length < 2) {
+      const match = prev[0].content.match(/^(\d+)(.*)$/);
+
+      if (match) {
+        const numberPart = match[1];  // "34"
+        const rest = match[2];        // "x"
+
+        if (rest === '') {
+          return prev;
+        }
+        else {
+
+          const newPrev: EquationBlock[] = [{
+            id: crypto.randomUUID(),
+            content: String(numberPart),
+            type: 'number',
+            leftSideBlock: leftSideBlock,
+            dragAdd: false,
+            dragMult: true,
+          }, {
+            id: crypto.randomUUID(),
+            content: '*',
+            type: 'operator',
+            leftSideBlock: leftSideBlock,
+            dragAdd: false,
+            dragMult: true,
+          }, {
+            id: crypto.randomUUID(),
+            content: String(rest),
+            type: 'variable',
+            leftSideBlock: leftSideBlock,
+            dragAdd: false,
+            dragMult: true,
+          }];
+
+          // return a NEW array (no mutation)
+          return newPrev;
+        }
+      }
+      else {
+        return prev;
+      }
+
+
+
+    } else {
+      return prev;
+    }
 
   }
-  if (content === '*') {
-    //first I am going to hard code the subtraction.  Then I will have to go back and compute 
-    setRightBlocks((prev) => [{ id: 'block-31', content: '1', type: 'number', 
-      leftSide: false, dragAdd: false, dragMult:false },]);
-      
 
-  }
-};
+
+  // EquationBoard.tsx
+  function handleBlockClick(id: string, content: string, leftSideBlock: boolean) {
+    console.log(`Clicked block ${id} (${content})`);
+    if (leftSideBlock) {
+      console.log('processing operator on left side')
+      setLeftBlocks((prev) => processOperator(prev, id, content));
+      setLeftBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
+      setRightBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
+
+    } else {
+      //the operator is on the right side.
+      console.log('Processing operator on right side')
+      setRightBlocks((prev) => processOperator(prev, id, content));
+      setRightBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
+      setLeftBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
+
+    }
+
+  };
 
   // Custom drag layer component to handle switching sides preview
   const DragLayer = () => {
@@ -179,7 +353,7 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
       item: monitor.getItem<DragItem>(),
     }));
 
-    if (!isDragging || !currentOffset || !(item?.dragMult  || item?.dragAdd)){
+    if (!isDragging || !currentOffset || !(item?.dragMult || item?.dragAdd)) {
       return null;
     }
 
@@ -197,10 +371,10 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
     const draggedX = currentOffset.x;
     let previewText = 'ERROR';
     if (item.dragMult) {
-      previewText = draggedX > equalsCenterX ? '1/2' : '2';
+      previewText = draggedX < equalsCenterX ? item.content : '1/' + item.content;
     } else if (item.dragAdd) {
-      previewText = draggedX > equalsCenterX ? '-3' : '3';
-      } 
+      previewText = draggedX < equalsCenterX ? item.content : '-' + item.content;
+    }
 
     return (
       <div
@@ -254,14 +428,14 @@ function BoardInner({
   leftBlocks: EquationBlock[];
   rightBlocks: EquationBlock[];
   handleDragBegin: (id: string) => void;
-  handleDragEnd: (id: string,
+  handleDragEnd: (id: string, content: string,
     clientOffset?: { x: number; y: number } | null,
-    leftSide?: boolean,
+    leftSideBlock?: boolean,
     parenLevel?: number,
     dragAdd?: boolean,
     dragMult?: boolean,
   ) => void;
-  handleBlockClick: (id: string, content: string) => void;
+  handleBlockClick: (id: string, content: string, leftSideBlock: boolean) => void;
 }) {
   const { isDragging: boardDragging, item } = useDragLayer((monitor) => ({
     isDragging: monitor.isDragging(),
@@ -299,7 +473,7 @@ function BoardInner({
                       id={block.id}
                       content={block.content}
                       type={block.type}
-                      leftSide={true}
+                      leftSideBlock={true}
                       onDragEnd={handleDragEnd}
                       onDragBegin={handleDragBegin}
                       onClick={handleBlockClick}
@@ -327,7 +501,7 @@ function BoardInner({
                     id={block.id}
                     content={block.content}
                     type={block.type}
-                    leftSide={false}
+                    leftSideBlock={false}
                     onDragEnd={handleDragEnd}
                     onDragBegin={handleDragBegin}
                     onClick={handleBlockClick}
