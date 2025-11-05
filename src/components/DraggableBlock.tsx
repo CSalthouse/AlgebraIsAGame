@@ -14,12 +14,12 @@ interface DraggableBlockProps {
   dragAdd?: boolean;
   // Indicates this block should be treated as a multiplicative value when dragged
   dragMult?: boolean;
-  leftSideBlock?: boolean;
+  leftSideBlock: boolean;
   parenLevel?: number;
   // onDragEnd now receives the id and the client offset where it was dropped
   onDragEnd?: (
     id: string, 
-    content?: string,
+    content: string,
     clientOffset?: { x: number; y: number } | null,
     leftSideBlock?: boolean, 
     parenLevel?: number,
@@ -29,7 +29,7 @@ interface DraggableBlockProps {
   onDragBegin?: (id: string) => void;
   hidden?: boolean;
   dimmed?: boolean;
-  onClick?: (id: string, content: string) => void;
+  onClick?: (id: string, content: string, leftSideBlock:boolean) => void;
   onPointerDown?: (id: string) => void;
 
 }
@@ -109,7 +109,7 @@ export function DraggableBlock({
   const wasDragging = useRef(false);
   useEffect(() => {
     if (wasDragging.current && !isDragging) {
-      onDragEnd?.(id);
+      onDragEnd?.(id,content);
     }
     wasDragging.current = isDragging;
   }, [isDragging, id, onDragEnd]);
@@ -152,7 +152,7 @@ export function DraggableBlock({
         console.log(`DraggableBlock.onTouchStart id=${id} type=${e.type} clientX=${t ? t.clientX : 'n/a'} clientY=${t ? t.clientY : 'n/a'}`);
         onPointerDown?.(id);
       }}
-      onClick={() => onClick?.(id, content)}
+      onClick={() => onClick?.(id, content, leftSideBlock)}
       data-plus={id === 'block-3' && content === '+3'}
       data-block-id={id}
       data-drag-add={dragAdd ? 'true' : undefined}

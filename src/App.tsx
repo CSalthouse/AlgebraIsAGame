@@ -43,7 +43,7 @@ export default function App() {
   // Each block has a stable `id`, `content` string to display, and
   // a `type` literal used for rendering/styling/dragging logic.
   const leftSide = [
-    { id: crypto.randomUUID(), content: '3x', type: 'variable' as const,
+    { id: crypto.randomUUID(), content: '5x', type: 'variable' as const,
        leftSideBlock: true, dragAdd: false, dragMult: false },
     { id: crypto.randomUUID(), content: '+', type: 'operator' as const,
        leftSideBlock: true, dragAdd:false, dragMult: false   },

@@ -83,7 +83,7 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
   }, [leftBlocks, rightBlocks]);
 
   // Handler invoked when drag begins
-  function handleDragBegin(id: string) { }
+  function handleDragBegin(_id: string) { }
 
   function findOperator(prev: EquationBlock[], id: string): string | null {
     // Find the index of the block with the given id
@@ -106,29 +106,14 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
     return operatorBlock?.id ?? null;
   }
 
-  function findNextOperator(prev: EquationBlock[], id: string): string | null {
-    // Find the index of the block with the given id
-    const index = prev.findIndex(block => block.id === id);
-
-    // If not found or if it’s the last item, return null
-    if (index === -1 || index === prev.length - 1) {
-      return null;
-    }
-
-    // Get the next block
-    const nextBlock = prev[index + 1];
-
-    // Return its id (could check type === 'operator' if you only want operators)
-    console.log(`findOperator: for id=${id}, found operator id=${nextBlock?.id}`);
-    return nextBlock?.id ?? null;
-  }
+ 
 
 
   // Handler invoked when drag ends. Accepts optional clientOffset from drag monitor.
-  function handleDragEnd(id: string, content?: string, 
+  function handleDragEnd(id: string, content: string | undefined, 
     clientOffset?: { x: number; y: number } | null,
-    leftSideBlock?: boolean, parenLevel?: number, dragAdd?: boolean, 
-    dragMult?: boolean,) {
+    leftSideBlock?: boolean, _parenLevel?: number, dragAdd?: boolean, 
+    dragMult?: boolean) {
     console.log(`handleDragEnd id=${id} clientOffset=${clientOffset ? `(${clientOffset.x}, ${clientOffset.y})` : 'null'}`);
 
     if (!clientOffset) return;
@@ -152,18 +137,19 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
         setLeftBlocks((prev) => prev.filter((b) => b.id !== id));
 
 
+
         if (dragAdd) {
           // append to right side
-          setRightBlocks((prev) => [...prev, { id: 'block-2', content: '-', 
+          setRightBlocks((prev) => [...prev, { id: crypto.randomUUID(), content: '-', 
             type: 'operator', leftSideBlock: true }]);
-          setRightBlocks((prev) => [...prev, { id, content: content,
+          setRightBlocks((prev) => [...prev, { id:id, content: content,
              type: 'number', leftSideBlock: true }]);
           console.log('Added subtraction blocks to right side');
         }
         if (dragMult) {
           // append to right side
-          setRightBlocks((prev) => [{ id: 'block-2', content: '*', type: 'operator', leftSideBlock: true }, ...prev]);
-          setRightBlocks((prev) => [{ id, content: '1/'+content, type: 'number', leftSideBlock: true }, ...prev]);
+          setRightBlocks((prev) => [{ id: crypto.randomUUID(), content: '*', type: 'operator', leftSideBlock: true }, ...prev]);
+          setRightBlocks((prev) => [{ id: id, content: '1/'+content, type: 'number', leftSideBlock: true }, ...prev]);
         }
       }
     }
@@ -184,10 +170,22 @@ export function EquationBoard({ leftSide, rightSide, onAddStep }: EquationBoardP
   }
 
 function parseFraction(str: string): { numerator: number; denominator: number } {
-  const parts = str.split('/').map(s => s.trim());
-  const numerator = Number(parts[0]);
-  const denominator = parts.length > 1 ? Number(parts[1]) : 1;
-  return { numerator, denominator };
+  try {
+    const parts = str.split('/').map(s => s.trim());
+    const numerator = Number(parts[0]);
+    const denominator = parts.length > 1 ? Number(parts[1]) : 1;
+    
+    if (isNaN(numerator) || isNaN(denominator)) {
+      return { numerator: Number(str), denominator: 1 };
+    }
+    if (denominator === 0) {
+      throw new Error('Division by zero');
+    }
+    return { numerator, denominator };
+  } catch (e) {
+    // If parsing fails, treat it as a whole number
+    return { numerator: Number(str), denominator: 1 };
+  }
 }
 
 function gcd(a: number, b: number): number {
@@ -201,71 +199,99 @@ function gcd(a: number, b: number): number {
   return a;
 }
 
-  function processOperator(prev: EquationBlock[], id: string, content: string): EquationBlock[] {
+  function processOperator(prev: EquationBlock[], id: string): EquationBlock[] {
     const index = prev.findIndex(b => b.id === id);
     console.log(`processOperator: operator id=${id} at index=${index}`);
     if (index <= 0 || index >= prev.length - 1) {
-     console.log(`Operator at index ${index} cannot be processed. index = {index }`);
+      console.log(`Operator at index ${index} cannot be processed.`);
       return prev;
     }
     const left = prev[index - 1];
     const op = prev[index];      // operator at index
     const right = prev[index + 1];
-console.log(`Computed value for ${left.content} ${op.content} ${right.content}`);  
+    console.log(`Processing operation: ${left.content} ${op.content} ${right.content}`);  
 
-    // convert strings to numbers safely
-    const leftNum = Number(left.content);
-    const rightNum = Number(right.content);
+    const leftFraction = parseFraction(left.content);
+    const rightFraction = parseFraction(right.content);
+    
+    let valNumerator: number;
+    let valDenominator: number;
 
-    let value = String(leftNum);
-    if (op.content === '+') value = String(leftNum + rightNum);
-    if (op.content === '-') value = String(leftNum - rightNum);
-    if (op.content === '*') {
-      console.log('Processing multiplication');
-      const leftFraction = parseFraction(left.content);
-      const rightFraction = parseFraction(right.content);
-      const leftNumerator = leftFraction.numerator;
-      const leftDenominator = leftFraction.denominator;
-      const rightNumerator = rightFraction.numerator;
-      const rightDenominator = rightFraction.denominator;
-      console.log('Processing multiplication values');
-      console.log(`Computed value for ${leftNumerator} * ${rightNumerator} /  ${leftDenominator} *  ${rightDenominator}`);  
-
-      const valNumerator=leftNumerator*rightNumerator;
-      const valDenominator=leftDenominator*rightDenominator;
-      const commonDivisor = gcd(valNumerator, valDenominator);
-      if (valDenominator/commonDivisor) {
-        value= String(valNumerator/commonDivisor);
-      } else {
-        value = valNumerator/commonDivisor + '/' + valDenominator/commonDivisor;
+    if (op.content === '+' || op.content === '-') {
+      // For addition/subtraction: (a/b ± c/d) = (ad ± cb)/bd
+      valNumerator = leftFraction.numerator * rightFraction.denominator + 
+        (op.content === '+' ? 1 : -1) * rightFraction.numerator * leftFraction.denominator;
+      valDenominator = leftFraction.denominator * rightFraction.denominator;
+    } else if (op.content === '*') {
+      console.log('Processing multiplication...');
+      console.log('Left fraction:', leftFraction);
+      console.log('Right fraction:', rightFraction);
+      // For multiplication: (a/b * c/d) = (ac)/(bd)
+      valNumerator = leftFraction.numerator * rightFraction.numerator;
+      valDenominator = leftFraction.denominator * rightFraction.denominator;
+      console.log('Raw result:', { valNumerator, valDenominator });
+    } else if (op.content === '/') {
+      // For division: (a/b / c/d) = (ad)/(bc)
+      if (rightFraction.numerator === 0) {
+        console.error('Division by zero');
+        return prev;
       }
-      console.log(`Computed value for ${leftNumerator} * ${rightNumerator} /  ${leftDenominator} *  ${rightDenominator}`);  
-
+      valNumerator = leftFraction.numerator * rightFraction.denominator;
+      valDenominator = leftFraction.denominator * rightFraction.numerator;
+    } else {
+      console.error('Unknown operator:', op.content);
+      return prev;
     }
-    if (op.content === '/') value = String(leftNum / rightNum);
-console.log(`Computed value for ${left.content} ${op.content} ${right.content} = ${value}`);  
-    const combined: EquationBlock = {
+
+    // Ensure denominators are always positive
+    if (valDenominator < 0) {
+      valNumerator = -valNumerator;
+      valDenominator = -valDenominator;
+    }
+
+    // Simplify the fraction
+    const commonDivisor = gcd(Math.abs(valNumerator), Math.abs(valDenominator));
+    console.log('Common divisor:', commonDivisor);
+    const resultNumerator = valNumerator / commonDivisor;
+    const resultDenominator = valDenominator / commonDivisor;
+
+    // Format the result
+    const resultValue = resultDenominator === 1 
+      ? String(resultNumerator)
+      : `${resultNumerator}/${resultDenominator}`;
+    
+    console.log(`Final computed value: ${resultValue}`);
+
+    // Create new block with the result
+    const newBlock: EquationBlock = {
       id: crypto.randomUUID(),
-      content: String(value),
+      content: resultValue,
       type: 'number',
       leftSideBlock: left.leftSideBlock,
       dragAdd: false,
       dragMult: false,
     };
-
-    // return a NEW array (no mutation)
-    console.log(`Combining blocks at index ${index-1}, ${index}, ${index+1} into new block with id=${combined.id} and content=${combined.content}`);
-    return [
+    
+    console.log(`Combining blocks at index ${index-1}, ${index}, ${index+1} into new block with id=${newBlock.id} and content=${newBlock.content}`);
+    
+    // Return a new array with the result block replacing the three input blocks
+    const newEquationBlock = [
       ...prev.slice(0, index - 1), // everything before left
-      combined,                    // the new combined number
-      ...prev.slice(index + 2),    // everything after right
+      newBlock,                    // the new combined number
+      ...prev.slice(index + 2)     // everything after right
     ];
+    
+    console.log('New Equation Block:', newEquationBlock);
+    return newEquationBlock;
   }
 
   function expandVariableProduct(prev: EquationBlock[], leftSideBlock: boolean): EquationBlock[] {
     if (prev.length < 2) {
       const match = prev[0].content.match(/^(\d+)(.*)$/);
-
+      if (prev[0].type!='variable') 
+        {
+          return prev;
+        }
       if (match) {
         const numberPart = match[1];  // "34"
         const rest = match[2];        // "x"
@@ -316,23 +342,23 @@ console.log(`Computed value for ${left.content} ${op.content} ${right.content} =
 
 
   // EquationBoard.tsx
-  function handleBlockClick(id: string, content: string, leftSideBlock: boolean) {
+  function handleBlockClick(id: string, content: string, _leftSideBlock: boolean ) {
     console.log(`Clicked block ${id} (${content})`);
-    if (leftSideBlock) {
+    // First find which side the block is on by checking both arrays
+    const isLeftSide = leftBlocks.some(b => b.id === id);
+    
+    if (isLeftSide) {
       console.log('processing operator on left side')
-      setLeftBlocks((prev) => processOperator(prev, id, content));
-      setLeftBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
-      setRightBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
-
+      setLeftBlocks((prev) => processOperator(prev, id));
+      setLeftBlocks((prev) => expandVariableProduct(prev, true));
+      setRightBlocks((prev) => expandVariableProduct(prev, false));
     } else {
       //the operator is on the right side.
       console.log('Processing operator on right side')
-      setRightBlocks((prev) => processOperator(prev, id, content));
-      setRightBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
-      setLeftBlocks((prev) => expandVariableProduct(prev, leftSideBlock));
-
+      setRightBlocks((prev) => processOperator(prev, id));
+      setRightBlocks((prev) => expandVariableProduct(prev, false));
+      setLeftBlocks((prev) => expandVariableProduct(prev, true));
     }
-
   };
 
   // Custom drag layer component to handle switching sides preview
@@ -489,7 +515,7 @@ function BoardInner({
 
 
             {/* Equals sign */}
-            <DraggableBlock id="equals" content="=" type="equals" />
+            <DraggableBlock id="equals" content="=" type="equals" leftSideBlock />
 
             {/* Right side of equation */}
             <div className="flex items-center gap-3">
