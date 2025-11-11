@@ -218,6 +218,11 @@ function gcd(a: number, b: number): number {
     let valDenominator: number;
 
     if (op.content === '+' || op.content === '-') {
+        if (left.type=== 'variable' && right.type === 'number')
+           {return prev;}
+        if (right.type=== 'variable' && left.type === 'number')
+           {return prev;}
+        
       // For addition/subtraction: (a/b ± c/d) = (ad ± cb)/bd
       valNumerator = leftFraction.numerator * rightFraction.denominator + 
         (op.content === '+' ? 1 : -1) * rightFraction.numerator * leftFraction.denominator;
