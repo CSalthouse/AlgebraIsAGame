@@ -14,6 +14,7 @@ interface StepsPaneProps {
 }
 
 export function StepsPane({ steps, onToggleCompleted }: StepsPaneProps) {
+  console.log(onToggleCompleted);
   return (
     <div className="h-full bg-gray-50 border-l border-gray-200 flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200 bg-white">
